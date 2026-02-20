@@ -16,15 +16,26 @@ async function main() {
   
   console.log('🎉 Seeding Jin\'s Launch Party...\n');
   
-  // Generate IDs
+  // Generate IDs and keypair
   const eventId = 'jins-launch-party';
   const eventDid = `did:imajin:evt_${Date.now().toString(36)}`;
   const creatorDid = 'did:imajin:77d06a6558dcc3bf'; // Jin's DID
+  
+  // Generate event keypair
+  const { utils, getPublicKey } = await import('@noble/ed25519');
+  const privateKey = utils.randomSecretKey();
+  const publicKey = await getPublicKey(privateKey);
+  const publicKeyHex = Array.from(publicKey).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  console.log('🔑 Generated event keypair');
+  console.log('  Public key:', publicKeyHex.slice(0, 32) + '...');
+  console.log('  ⚠️  Private key (secure this!):', Array.from(privateKey).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16) + '...');
   
   // Create event
   const [event] = await db.insert(events).values({
     id: eventId,
     did: eventDid,
+    publicKey: publicKeyHex,
     creatorDid,
     title: "Jin's Launch Party",
     description: `The genesis event of the sovereign network.

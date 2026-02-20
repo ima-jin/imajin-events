@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
     const [event] = await db.insert(events).values({
       id: eventId,
       did: eventDid,
+      publicKey: eventKeypair.publicKey,
       creatorDid: identity.id,
       title,
       description,
@@ -149,7 +150,7 @@ export async function GET(request: NextRequest) {
 // Helper to generate keypair for event
 async function generateEventKeypair() {
   const { utils, getPublicKey } = await import('@noble/ed25519');
-  const privateKey = utils.randomPrivateKey();
+  const privateKey = utils.randomSecretKey();
   const publicKey = await getPublicKey(privateKey);
   return {
     privateKey: bytesToHex(privateKey),

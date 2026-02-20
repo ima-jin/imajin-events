@@ -7,5 +7,5 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  tablesFilter: ['events', 'ticket_types', 'tickets'],
+  tablesFilter: ['events', 'event_admins', 'ticket_types', 'tickets', 'ticket_transfers', 'ticket_queue'],
 });
