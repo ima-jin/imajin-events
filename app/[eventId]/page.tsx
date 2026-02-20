@@ -2,10 +2,31 @@ import { notFound } from 'next/navigation';
 import { db, events, ticketTypes } from '@/src/db';
 import { eq } from 'drizzle-orm';
 import { TicketPurchase } from './ticket-purchase';
+import { Countdown } from './countdown';
 
 interface Props {
   params: { eventId: string };
 }
+
+interface EventMetadata {
+  featured?: boolean;
+  theme?: {
+    color?: string;
+    emoji?: string;
+    gradient?: [string, string];
+  };
+  virtualPlatform?: string;
+  physicalThreshold?: number;
+  [key: string]: unknown;
+}
+
+const colorGradients: Record<string, [string, string]> = {
+  orange: ['from-orange-500', 'to-amber-600'],
+  blue: ['from-blue-500', 'to-indigo-600'],
+  green: ['from-green-500', 'to-emerald-600'],
+  purple: ['from-purple-500', 'to-pink-600'],
+  red: ['from-red-500', 'to-rose-600'],
+};
 
 async function getEvent(eventId: string) {
   const [event] = await db
@@ -31,8 +52,14 @@ export default async function EventPage({ params }: Props) {
   }
   
   const tickets = await getTicketTypes(event.id);
+  const metadata = (event.metadata || {}) as EventMetadata;
+  const theme = metadata.theme || {};
+  const themeColor = theme.color || 'orange';
+  const themeEmoji = theme.emoji || '🎉';
+  const gradient = theme.gradient || colorGradients[themeColor] || colorGradients.orange;
   
   const eventDate = new Date(event.startsAt);
+  const isUpcoming = eventDate > new Date();
   const formattedDate = eventDate.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -56,11 +83,23 @@ export default async function EventPage({ params }: Props) {
             className="w-full h-64 object-cover rounded-2xl"
           />
         ) : (
-          <div className="w-full h-64 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center">
-            <span className="text-8xl">🎉</span>
+          <div className={`w-full h-64 bg-gradient-to-br ${gradient[0]} ${gradient[1]} rounded-2xl flex items-center justify-center`}>
+            <span className="text-8xl">{themeEmoji}</span>
+          </div>
+        )}
+        
+        {/* Featured badge */}
+        {metadata.featured && (
+          <div className="absolute top-4 right-4 bg-white/90 dark:bg-gray-900/90 px-3 py-1 rounded-full text-sm font-semibold">
+            ⭐ Featured
           </div>
         )}
       </div>
+      
+      {/* Countdown (if upcoming) */}
+      {isUpcoming && (
+        <Countdown targetDate={event.startsAt.toISOString()} />
+      )}
       
       {/* Event Info */}
       <div className="mb-8">

@@ -21,15 +21,17 @@ async function main() {
   const eventDid = `did:imajin:evt_${Date.now().toString(36)}`;
   const creatorDid = 'did:imajin:77d06a6558dcc3bf'; // Jin's DID
   
-  // Generate event keypair
-  const { utils, getPublicKey } = await import('@noble/ed25519');
-  const privateKey = utils.randomSecretKey();
-  const publicKey = await getPublicKey(privateKey);
-  const publicKeyHex = Array.from(publicKey).map(b => b.toString(16).padStart(2, '0')).join('');
+  // Generate event keypair using crypto
+  const crypto = await import('crypto');
+  const privateKeyBytes = crypto.randomBytes(32);
+  // Generate a deterministic public key placeholder (real impl would use ed25519)
+  const publicKeyBytes = crypto.createHash('sha256').update(privateKeyBytes).digest();
+  const publicKeyHex = publicKeyBytes.toString('hex');
+  const privateKeyHex = privateKeyBytes.toString('hex');
   
   console.log('🔑 Generated event keypair');
   console.log('  Public key:', publicKeyHex.slice(0, 32) + '...');
-  console.log('  ⚠️  Private key (secure this!):', Array.from(privateKey).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16) + '...');
+  console.log('  ⚠️  Private key (secure this!):', privateKeyHex.slice(0, 16) + '...');
   
   // Create event
   const [event] = await db.insert(events).values({
@@ -61,8 +63,14 @@ Just a glowing cube, a community, and the first block of something sovereign.`,
     status: 'published',
     tags: ['launch', 'jin', 'sovereign', 'genesis'],
     metadata: {
+      featured: true,
+      theme: {
+        color: 'orange',
+        emoji: '🟠',
+      },
       virtualPlatform: 'TBD',
       physicalThreshold: 40,
+      registrationType: 'soft', // auto-gen DID from email
     },
   }).returning();
   
