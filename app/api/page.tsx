@@ -38,6 +38,14 @@ export default function APIPage() {
       ],
     },
     {
+      path: '/api/events/[id]/tiers',
+      methods: [
+        { method: 'GET', description: 'List ticket tiers with availability' },
+        { method: 'POST', description: 'Create new tier' },
+        { method: 'PUT', description: 'Update tier (append-only: price↓, capacity↑, perks+)' },
+      ],
+    },
+    {
       path: '/api/checkout',
       methods: [
         { method: 'POST', description: 'Start ticket purchase (Stripe)' },
@@ -74,6 +82,7 @@ export default function APIPage() {
           <ul className="space-y-2 text-gray-600 dark:text-gray-400">
             <li>✓ Events with DID + keypair (cryptographic identity)</li>
             <li>✓ Multiple ticket tiers with capacity limits</li>
+            <li>✓ Append-only tier updates (price↓, capacity↑, perks+)</li>
             <li>✓ Ticket holds (72h reservation)</li>
             <li>✓ Queue system for high-demand events</li>
             <li>✓ Transparent ticket transfers (chain of custody)</li>
