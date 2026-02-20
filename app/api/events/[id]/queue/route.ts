@@ -9,7 +9,7 @@ import { randomBytes } from 'crypto';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -73,7 +73,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -81,6 +81,7 @@ export async function POST(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
     const body = await request.json();
@@ -96,7 +97,7 @@ export async function POST(
       .from(ticketTypes)
       .where(and(
         eq(ticketTypes.id, ticketTypeId),
-        eq(ticketTypes.eventId, params.id)
+        eq(ticketTypes.eventId, id)
       ))
       .limit(1);
 
@@ -158,7 +159,7 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {

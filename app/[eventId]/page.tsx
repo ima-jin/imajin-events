@@ -6,15 +6,16 @@ import { Countdown } from './countdown';
 import type { Metadata } from 'next';
 
 interface Props {
-  params: { eventId: string };
+  params: Promise<{ eventId: string }>;
 }
 
 // Generate dynamic metadata for OG/Twitter cards
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { eventId } = await params;
   const [event] = await db
     .select()
     .from(events)
-    .where(eq(events.id, params.eventId))
+    .where(eq(events.id, eventId))
     .limit(1);
   
   if (!event) {
@@ -34,7 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const tickets = await db
     .select()
     .from(ticketTypes)
-    .where(eq(ticketTypes.eventId, params.eventId));
+    .where(eq(ticketTypes.eventId, eventId));
   
   const lowestPrice = tickets.length > 0
     ? Math.min(...tickets.map(t => t.price))
@@ -118,7 +119,8 @@ async function getTicketTypes(eventId: string) {
 }
 
 export default async function EventPage({ params }: Props) {
-  const event = await getEvent(params.eventId);
+  const { eventId } = await params;
+  const event = await getEvent(eventId);
   
   if (!event) {
     notFound();

@@ -8,11 +8,11 @@ import { eq, desc } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 
 interface Props {
-  params: { eventId: string };
+  params: Promise<{ eventId: string }>;
 }
 
 export default async function AdminPage({ params }: Props) {
-  const { eventId } = params;
+  const { eventId } = await params;
   
   // Fetch event
   const [event] = await db

@@ -8,19 +8,21 @@ import { eq, and } from 'drizzle-orm';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const admins = await db
       .select()
       .from(eventAdmins)
-      .where(eq(eventAdmins.eventId, params.id));
+      .where(eq(eventAdmins.eventId, id));
 
     // Also get the creator (implicit owner)
     const [event] = await db
       .select({ creatorDid: events.creatorDid })
       .from(events)
-      .where(eq(events.id, params.id))
+      .where(eq(events.id, id))
       .limit(1);
 
     return NextResponse.json({ 
@@ -38,7 +40,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -46,13 +48,14 @@ export async function POST(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
     // Check event exists and user is authorized
     const [event] = await db
       .select()
       .from(events)
-      .where(eq(events.id, params.id))
+      .where(eq(events.id, id))
       .limit(1);
 
     if (!event) {
@@ -68,7 +71,7 @@ export async function POST(
         .select()
         .from(eventAdmins)
         .where(and(
-          eq(eventAdmins.eventId, params.id),
+          eq(eventAdmins.eventId, id),
           eq(eventAdmins.did, identity.id)
         ))
         .limit(1);
@@ -101,7 +104,7 @@ export async function POST(
       .select()
       .from(eventAdmins)
       .where(and(
-        eq(eventAdmins.eventId, params.id),
+        eq(eventAdmins.eventId, id),
         eq(eventAdmins.did, did)
       ))
       .limit(1);
@@ -116,7 +119,7 @@ export async function POST(
     }
 
     const [admin] = await db.insert(eventAdmins).values({
-      eventId: params.id,
+      eventId: id,
       did,
       role,
       addedBy: identity.id,
@@ -135,7 +138,7 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -143,6 +146,7 @@ export async function DELETE(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
     const { searchParams } = new URL(request.url);
@@ -156,7 +160,7 @@ export async function DELETE(
     const [event] = await db
       .select()
       .from(events)
-      .where(eq(events.id, params.id))
+      .where(eq(events.id, id))
       .limit(1);
 
     if (!event) {
@@ -175,7 +179,7 @@ export async function DELETE(
     const result = await db
       .delete(eventAdmins)
       .where(and(
-        eq(eventAdmins.eventId, params.id),
+        eq(eventAdmins.eventId, id),
         eq(eventAdmins.did, did)
       ))
       .returning();

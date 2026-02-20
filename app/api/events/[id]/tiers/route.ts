@@ -9,13 +9,15 @@ import { randomBytes } from 'crypto';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const tiers = await db
       .select()
       .from(ticketTypes)
-      .where(eq(ticketTypes.eventId, params.id));
+      .where(eq(ticketTypes.eventId, id));
 
     return NextResponse.json({
       tiers: tiers.map(t => ({
@@ -34,7 +36,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -42,10 +44,11 @@ export async function POST(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
     // Check authorization
-    const authorized = await isEventAdmin(params.id, identity.id);
+    const authorized = await isEventAdmin(id, identity.id);
     if (!authorized) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
@@ -64,7 +67,7 @@ export async function POST(
 
     const [tier] = await db.insert(ticketTypes).values({
       id: tierId,
-      eventId: params.id,
+      eventId: id,
       name,
       description,
       price,
@@ -86,7 +89,7 @@ export async function POST(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -94,9 +97,10 @@ export async function PUT(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
-    const authorized = await isEventAdmin(params.id, identity.id);
+    const authorized = await isEventAdmin(id, identity.id);
     if (!authorized) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 });
     }
@@ -114,7 +118,7 @@ export async function PUT(
       .from(ticketTypes)
       .where(and(
         eq(ticketTypes.id, tierId),
-        eq(ticketTypes.eventId, params.id)
+        eq(ticketTypes.eventId, id)
       ))
       .limit(1);
 

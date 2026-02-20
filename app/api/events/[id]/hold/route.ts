@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, tickets, ticketTypes } from '@/src/db';
 import { requireAuth } from '@/src/lib/auth';
-import { eq, and, isNull, lt } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 
 const DEFAULT_HOLD_HOURS = 72;
@@ -11,7 +11,7 @@ const DEFAULT_HOLD_HOURS = 72;
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -19,6 +19,7 @@ export async function POST(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
     const body = await request.json();
@@ -34,7 +35,7 @@ export async function POST(
       .from(ticketTypes)
       .where(and(
         eq(ticketTypes.id, ticketTypeId),
-        eq(ticketTypes.eventId, params.id)
+        eq(ticketTypes.eventId, id)
       ))
       .limit(1);
 
@@ -103,7 +104,7 @@ export async function POST(
 
     const [ticket] = await db.insert(tickets).values({
       id: ticketId,
-      eventId: params.id,
+      eventId: id,
       ticketTypeId,
       status: 'held',
       heldBy: identity.id,
@@ -127,7 +128,7 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {

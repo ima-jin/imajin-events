@@ -8,13 +8,14 @@ import { eq, and } from 'drizzle-orm';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const [event] = await db
       .select()
       .from(events)
-      .where(eq(events.id, params.id))
+      .where(eq(events.id, id))
       .limit(1);
 
     if (!event) {
@@ -25,13 +26,13 @@ export async function GET(
     const types = await db
       .select()
       .from(ticketTypes)
-      .where(eq(ticketTypes.eventId, params.id));
+      .where(eq(ticketTypes.eventId, id));
 
     // Get admins
     const admins = await db
       .select()
       .from(eventAdmins)
-      .where(eq(eventAdmins.eventId, params.id));
+      .where(eq(eventAdmins.eventId, id));
 
     return NextResponse.json({
       event,
@@ -52,7 +53,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const authResult = await requireAuth(request);
   if ('error' in authResult) {
@@ -60,13 +61,14 @@ export async function PUT(
   }
 
   const { identity } = authResult;
+  const { id } = await params;
 
   try {
     // Check event exists
     const [event] = await db
       .select()
       .from(events)
-      .where(eq(events.id, params.id))
+      .where(eq(events.id, id))
       .limit(1);
 
     if (!event) {
@@ -82,7 +84,7 @@ export async function PUT(
         .select()
         .from(eventAdmins)
         .where(and(
-          eq(eventAdmins.eventId, params.id),
+          eq(eventAdmins.eventId, id),
           eq(eventAdmins.did, identity.id)
         ))
         .limit(1);
@@ -129,7 +131,7 @@ export async function PUT(
     const [updated] = await db
       .update(events)
       .set(updates)
-      .where(eq(events.id, params.id))
+      .where(eq(events.id, id))
       .returning();
 
     return NextResponse.json({ event: updated });
