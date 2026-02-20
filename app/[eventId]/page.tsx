@@ -3,9 +3,82 @@ import { db, events, ticketTypes } from '@/src/db';
 import { eq } from 'drizzle-orm';
 import { TicketPurchase } from './ticket-purchase';
 import { Countdown } from './countdown';
+import type { Metadata } from 'next';
 
 interface Props {
   params: { eventId: string };
+}
+
+// Generate dynamic metadata for OG/Twitter cards
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const [event] = await db
+    .select()
+    .from(events)
+    .where(eq(events.id, params.eventId))
+    .limit(1);
+  
+  if (!event) {
+    return {
+      title: 'Event Not Found',
+    };
+  }
+  
+  const eventDate = new Date(event.startsAt);
+  const formattedDate = eventDate.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+  
+  const tickets = await db
+    .select()
+    .from(ticketTypes)
+    .where(eq(ticketTypes.eventId, params.eventId));
+  
+  const lowestPrice = tickets.length > 0
+    ? Math.min(...tickets.map(t => t.price))
+    : null;
+  
+  const priceText = lowestPrice !== null
+    ? lowestPrice === 0 
+      ? 'Free' 
+      : `From $${(lowestPrice / 100).toFixed(0)}`
+    : '';
+  
+  const description = event.description
+    ? event.description.slice(0, 200) + (event.description.length > 200 ? '...' : '')
+    : `Join us for ${event.title} on ${formattedDate}`;
+  
+  const baseUrl = process.env.NEXT_PUBLIC_EVENTS_URL || 'https://events.imajin.ai';
+  const url = `${baseUrl}/${event.id}`;
+  
+  // Use event image or generate a placeholder description
+  const ogImage = event.imageUrl || `${baseUrl}/api/og?title=${encodeURIComponent(event.title)}&date=${encodeURIComponent(formattedDate)}&location=${encodeURIComponent(event.city || 'Virtual')}`;
+  
+  return {
+    title: `${event.title} | Imajin Events`,
+    description,
+    openGraph: {
+      title: event.title,
+      description,
+      url,
+      siteName: 'Imajin Events',
+      type: 'website',
+      images: event.imageUrl ? [{ url: event.imageUrl, width: 1200, height: 630 }] : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: event.title,
+      description,
+      images: event.imageUrl ? [event.imageUrl] : undefined,
+    },
+    other: {
+      'event:date': eventDate.toISOString(),
+      'event:location': event.city || 'Virtual',
+      ...(priceText && { 'event:price': priceText }),
+    },
+  };
 }
 
 interface EventMetadata {
