@@ -14,6 +14,39 @@ import * as ed from '@noble/ed25519';
 // Shared secret between pay service and events service
 // In production, use proper service-to-service auth
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'dev-secret';
+const PROFILE_URL = process.env.PROFILE_URL || 'https://profile.imajin.ai';
+
+/**
+ * Create or get a guest DID from the profile service.
+ * This creates a soft registration that can be claimed later.
+ */
+async function getOrCreateGuestDid(email: string, eventId: string, eventDid: string): Promise<string> {
+  try {
+    const response = await fetch(`${PROFILE_URL}/api/soft-register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email,
+        source: 'event',
+        sourceId: eventDid,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Soft register failed:', await response.text());
+      // Fallback to email-based DID
+      return `did:email:${email.replace('@', '_at_')}`;
+    }
+
+    const data = await response.json();
+    console.log(`Guest DID for ${email}: ${data.did} (isNew: ${data.isNew})`);
+    return data.did;
+  } catch (error) {
+    console.error('Soft register error:', error);
+    // Fallback to email-based DID
+    return `did:email:${email.replace('@', '_at_')}`;
+  }
+}
 
 interface PaymentWebhookPayload {
   type: 'checkout.completed' | 'payment.failed';
@@ -94,8 +127,8 @@ async function handleCheckoutCompleted(payload: PaymentWebhookPayload) {
     const signatureData = `${ticketId}:${event.did}:${customerEmail}:${Date.now()}`;
     const signature = Buffer.from(signatureData).toString('base64');
     
-    // For now, use email as the owner DID (until we have proper identity)
-    const ownerDid = `did:email:${customerEmail.replace('@', '_at_')}`;
+    // Soft-register with profile service to create/get guest DID
+    const ownerDid = await getOrCreateGuestDid(customerEmail, event.id, event.did);
     
     const [ticket] = await db.insert(tickets).values({
       id: ticketId,
